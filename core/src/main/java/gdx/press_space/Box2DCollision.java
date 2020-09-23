@@ -1,28 +1,55 @@
 package gdx.press_space;
 
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.*;
+
 
 public class Box2DCollision implements ContactListener {
 	Player player;
+	static Vector2[] manifold = new Vector2[2];
 
 	Box2DCollision(Player p) {
 		player = p;
+		manifold[0] = new Vector2(0, 0);
+		manifold[1] = new Vector2(10, 10);
 	}
+
 	@Override
 	public void beginContact(Contact contact) {
-		GameActor a = (GameActor) contact.getFixtureA().getBody().getUserData();
-		GameActor b = (GameActor) contact.getFixtureB().getBody().getUserData();
-
-		boolean playerGroundCollision = (a == GameActor.PLAYER || b == GameActor.PLAYER)
-										&& (a == GameActor.GROUND || b == GameActor.GROUND);
-
-		if (playerGroundCollision) {
+		//Entity a = (Entity) contact.getFixtureA().getBody().getUserData();
+		//Entity b = (Entity) contact.getFixtureB().getBody().getUserData();
+		/*WorldManifold w = contact.getWorldManifold();
+		if (a.getClass()  == Player.class || b.getClass() == Player.class) {
+			manifold = w.getPoints();
+			float y = player.position.y - player.sprite.getWidth() / 2;
+			float y1 = manifold[0].y;
+			float y2 = manifold[1].y;
+			float d1 = Math.abs(y - y1);
+			float d2 = Math.abs(y - y2);
+			//System.out.println(y - y1);
+			//System.out.println(y - y2);
+			//System.out.println(y1 < y && y2 < y);
+			System.out.println(d1 < 1f && d2 < 1f); // yeah i don't know
+		}*/
+		if (checkCollisionWithGround(contact)) {
 			player.collisionWithGround();
 		}
 	}
 
 	@Override
-	public void endContact(Contact contact) {}
+	public void endContact(Contact contact) {
+		if (checkCollisionWithGround(contact)) {
+			player.offTheGround();
+		}
+	}
+
+	boolean checkCollisionWithGround(Contact contact) {
+		Entity a = (Entity) contact.getFixtureA().getBody().getUserData();
+		Entity b = (Entity) contact.getFixtureB().getBody().getUserData();
+
+		return (a.getClass()  == Player.class || b.getClass() == Player.class)
+				&& (a.getClass()  == Ground.class || b.getClass() == Ground.class);
+	}
 
 	@Override
 	public void preSolve(Contact contact, Manifold oldManifold) {}

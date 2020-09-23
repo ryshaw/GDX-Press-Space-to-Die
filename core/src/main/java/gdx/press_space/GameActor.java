@@ -1,5 +1,5 @@
 package gdx.press_space;
 
 public enum GameActor {
-	PLAYER, GROUND
+	PLAYER, GROUND, CORPSE
 }

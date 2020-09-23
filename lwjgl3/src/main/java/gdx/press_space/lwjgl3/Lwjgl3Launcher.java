@@ -19,6 +19,7 @@ public class Lwjgl3Launcher {
 		configuration.setTitle("Press Space to Die");
 		configuration.setWindowedMode(1600, 900);
 		configuration.setWindowIcon("player.png");
+		configuration.setResizable(false);
 		return configuration;
 	}
 }
