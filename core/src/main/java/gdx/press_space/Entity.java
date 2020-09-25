@@ -26,7 +26,5 @@ public abstract class Entity {
 
 	void dispose() { sprite.getTexture().dispose(); }
 
-	public String toString() {
-		return "Entity";
-	}
+	public String toString() { return "Entity"; }
 }

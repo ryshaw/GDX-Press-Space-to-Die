@@ -15,7 +15,7 @@ public class Corpse extends Entity {
 	}
 
 	void createBody(Vector2 p) {
-		sprite = new Sprite(new Texture("corpse.png"));
+		sprite = new Sprite(new Texture("images/corpse.png"));
 		body.setUserData(this);
 		body.setTransform(p, 0);
 		PolygonShape box = new PolygonShape();
@@ -33,7 +33,5 @@ public class Corpse extends Entity {
 	}
 
 	@Override
-	public String toString() {
-		return "Corpse";
-	}
+	public String toString() { return "Corpse"; }
 }

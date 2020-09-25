@@ -14,7 +14,7 @@ public class Ground extends Entity {
 	}
 
 	void createBody(Vector2 p) {
-		sprite = new Sprite(new Texture("ground.png"));
+		sprite = new Sprite(new Texture("images/ground.png"));
 		PolygonShape groundBox = new PolygonShape();
 		groundBox.setAsBox(800, 8.0f);
 		body.setTransform(p, 0);
@@ -28,7 +28,5 @@ public class Ground extends Entity {
 	}
 
 	@Override
-	public String toString() {
-		return "Ground";
-	}
+	public String toString() { return "Ground"; }
 }

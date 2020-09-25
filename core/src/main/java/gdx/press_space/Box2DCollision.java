@@ -16,8 +16,9 @@ public class Box2DCollision implements ContactListener {
 
 	@Override
 	public void beginContact(Contact contact) {
-		//Entity a = (Entity) contact.getFixtureA().getBody().getUserData();
-		//Entity b = (Entity) contact.getFixtureB().getBody().getUserData();
+		Entity a = (Entity) contact.getFixtureA().getBody().getUserData();
+		Entity b = (Entity) contact.getFixtureB().getBody().getUserData();
+		// lol work on this later
 		/*WorldManifold w = contact.getWorldManifold();
 		if (a.getClass()  == Player.class || b.getClass() == Player.class) {
 			manifold = w.getPoints();
@@ -31,24 +32,32 @@ public class Box2DCollision implements ContactListener {
 			//System.out.println(y1 < y && y2 < y);
 			System.out.println(d1 < 1f && d2 < 1f); // yeah i don't know
 		}*/
-		if (checkCollisionWithGround(contact)) {
+		if (checkCollisionWithGround(a, b)) {
 			player.collisionWithGround();
+		}
+		if (checkCollisionWithSpikes(a, b)) {
+			player.die();
 		}
 	}
 
 	@Override
 	public void endContact(Contact contact) {
-		if (checkCollisionWithGround(contact)) {
+		Entity a = (Entity) contact.getFixtureA().getBody().getUserData();
+		Entity b = (Entity) contact.getFixtureB().getBody().getUserData();
+
+		if (checkCollisionWithGround(a, b)) {
 			player.offTheGround();
 		}
 	}
 
-	boolean checkCollisionWithGround(Contact contact) {
-		Entity a = (Entity) contact.getFixtureA().getBody().getUserData();
-		Entity b = (Entity) contact.getFixtureB().getBody().getUserData();
-
+	boolean checkCollisionWithGround(Entity a, Entity b) {
 		return (a.getClass()  == Player.class || b.getClass() == Player.class)
 				&& (a.getClass()  == Ground.class || b.getClass() == Ground.class);
+	}
+
+	boolean checkCollisionWithSpikes(Entity a, Entity b) {
+		return (a.getClass()  == Player.class || b.getClass() == Player.class)
+				&& (a.getClass()  == Spikes.class || b.getClass() == Spikes.class);
 	}
 
 	@Override

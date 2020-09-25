@@ -2,6 +2,8 @@ package gdx.press_space;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -24,6 +26,9 @@ public class GameScreen implements Screen {
 	BodyDef playerDef;
 	Array<Body> bodies;
 	Array<Entity> toRemove;
+	Music music;
+	float respawnDelay;
+	Sound respawn;
 
 
 	static Vector2[] manifolds;
@@ -32,17 +37,20 @@ public class GameScreen implements Screen {
 	GameScreen(final Main game, int level) {
 		this.game = game;
 		Box2D.init();
-		world = new World(new Vector2(0, -200f), true);
+		world = new World(new Vector2(0, -240f), true);
 		debugRenderer = new Box2DDebugRenderer();
 		float aspectRatio = (float) Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
 		camera = new OrthographicCamera(800, 800 * (aspectRatio));
 		camera.translate(-400, 0);
 		camera.update();
 
-		BodyDef groundBodyDef = new BodyDef();
-		groundBodyDef.type = BodyType.StaticBody;
-		Body groundBody = world.createBody(groundBodyDef);
-		Ground g = new Ground(groundBody, new Vector2(0, 8));
+		BodyDef staticBody = new BodyDef();
+		staticBody.type = BodyType.StaticBody;
+		Body groundBody = world.createBody(staticBody);
+		new Ground(groundBody, new Vector2(0, 8));
+
+		Body spikesBody = world.createBody(staticBody);
+		new Spikes(spikesBody, new Vector2(-600, 24));
 
 		playerDef = new BodyDef();
 		playerDef.type = BodyType.DynamicBody;
@@ -58,6 +66,14 @@ public class GameScreen implements Screen {
 		manifolds[0] = new Vector2(0, 0);
 		manifolds[1] = new Vector2(10, 10);
 		shapeRenderer = new ShapeRenderer();
+
+		music = Gdx.audio.newMusic(Gdx.files.internal("audio/the-lift-by-kevin-macleod.mp3"));
+		music.setVolume(0.2f);
+		music.setLooping(true);
+		music.play();
+
+		respawnDelay = 0;
+		respawn = Gdx.audio.newSound(Gdx.files.internal("audio/respawn.wav"));
 	}
 
 	@Override
@@ -66,24 +82,37 @@ public class GameScreen implements Screen {
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
 		if (player.dead) {
+			new Corpse(world.createBody(playerDef), player.deathPosition);
 			player.dead = false;
-			Corpse c = new Corpse(world.createBody(playerDef), player.deathPosition);
+			player.body.setActive(false);
+			respawnDelay = 1f;
 		}
 
-		//debugRenderer.render(world, camera.combined);
+		if (respawnDelay > 0) {
+			respawnDelay -= delta;
+			if (respawnDelay < 0) {
+				respawn.play(0.2f);
+				player.createBody(player.spawnPosition);
+			}
+		}
+
 		float d = (float) MathUtils.clamp(delta, 0, 0.05);
 		world.getBodies(bodies);
 		game.batch.setProjectionMatrix(camera.combined);
 		game.batch.begin();
 		for (Body b : bodies) {
 			Entity e = (Entity) b.getUserData();
-			e.update(game.batch, d);
+			if (!e.toString().equals("Player") || respawnDelay <= 0) e.update(game.batch, d);
+			// above line: don't update the player if the player is dead
 			if (checkOutOfBounds(e)) {
-				if (e.toString().equals("Player")) player.die();
-				else toRemove.add(e);
+				if (e.toString().equals("Player") && respawnDelay <= 0) {
+					player.die();
+				}
+				else if (!e.toString().equals("Player")) toRemove.add(e);
 			}
 		}
 		game.batch.end();
+		debugRenderer.render(world, camera.combined);
 
 		/*manifolds = Box2DCollision.manifold;
 		shapeRenderer.setProjectionMatrix(camera.combined);
@@ -111,7 +140,7 @@ public class GameScreen implements Screen {
 
 	private boolean checkOutOfBounds(Entity e) {
 		Vector2 p = e.position;
-		return (Math.abs(p.x) > 1000 || Math.abs(p.y) > 600);
+		return (Math.abs(p.x) > 1000 || Math.abs(p.y) > 450);
 	}
 
 
@@ -135,6 +164,7 @@ public class GameScreen implements Screen {
 		world.dispose();
 
 		shapeRenderer.dispose();
+		music.dispose();
 	}
 
 	@Override

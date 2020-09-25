@@ -2,12 +2,14 @@ package gdx.press_space;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
+import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 
@@ -15,6 +17,7 @@ public class Player extends Entity {
 	float deltaX, speed, accel, jumpingTime, deathTime;
 	boolean jumping, inAir, dead;
 	Vector2 deathPosition, spawnPosition;
+	Sound jump, death;
 
 	Player(Body b, Vector2 p) {
 		this.body = b;
@@ -26,8 +29,14 @@ public class Player extends Entity {
 		jumpingTime = 0f;
 		dead = false;
 		spawnPosition = p;
-		createBody(p);
 		deathTime = 1.5f;
+		jump = Gdx.audio.newSound(Gdx.files.internal("audio/jump.wav"));
+		death = Gdx.audio.newSound(Gdx.files.internal("audio/death.wav"));
+		sprite = new Sprite(new Texture("images/player.png"));
+		body.setUserData(this);
+
+		createBody(p);
+
 	}
 
 	@Override
@@ -67,6 +76,7 @@ public class Player extends Entity {
 			jumping = true;
 			jumpingTime = 0.3f;
 			inAir = true;
+			jump.play(0.2f);
 		}
 
 		if (Math.abs(body.getLinearVelocity().y) > 1.0f) { inAir = true; }
@@ -89,10 +99,12 @@ public class Player extends Entity {
 	}
 
 	void die() {
+		death.play(0.2f);
 		dead = true;
 		deathTime = 1.5f;
 		deathPosition = new Vector2(position.x, position.y); // gotta make a new instance
-		createBody(spawnPosition);
+		sprite.setAlpha(0f);
+		jumping = false;
 	}
 
 	void collisionWithGround() {
@@ -103,9 +115,9 @@ public class Player extends Entity {
 	void offTheGround() { inAir = true; }
 
 	void createBody(Vector2 p) {
-		sprite = new Sprite(new Texture("player.png"));
-		body.setUserData(this);
+		body.setActive(true);
 		body.setTransform(p, 0);
+		body.setLinearVelocity(0, 0);
 		position = body.getPosition();
 		PolygonShape box = new PolygonShape();
 		box.setAsBox(8, 8);
@@ -115,13 +127,19 @@ public class Player extends Entity {
 		fixtureDef.density = 0.5f;
 		fixtureDef.friction = 1f;
 		fixtureDef.restitution = 0f;
+		body.setType(BodyDef.BodyType.DynamicBody);
 		body.createFixture(fixtureDef);
 		box.dispose();
 		body.setLinearDamping(1f);
+		sprite.setAlpha(1f);
 	}
 
 	@Override
-	public String toString() {
-		return "Player";
+	void dispose() {
+		jump.dispose();
+		super.dispose();
 	}
+
+	@Override
+	public String toString() { return "Player"; }
 }
