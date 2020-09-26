@@ -16,10 +16,11 @@ public class Corpse extends Entity {
 
 	void createBody(Vector2 p) {
 		sprite = new Sprite(new Texture("images/corpse.png"));
+		sprite.setScale(GameScreen.unitScale);
 		body.setUserData(this);
 		body.setTransform(p, 0);
 		PolygonShape box = new PolygonShape();
-		box.setAsBox(8, 8);
+		box.setAsBox(0.5f, 0.5f);
 		position = body.getPosition();
 
 		FixtureDef fixtureDef = new FixtureDef();

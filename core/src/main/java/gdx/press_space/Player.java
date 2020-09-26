@@ -3,9 +3,9 @@ package gdx.press_space;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.audio.Sound;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
@@ -14,25 +14,25 @@ import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
 
 public class Player extends Entity {
-	float deltaX, speed, accel, jumpingTime, deathTime;
+	float deltaX, speed, accel, deathTime;
 	boolean jumping, inAir, dead;
 	Vector2 deathPosition, spawnPosition;
 	Sound jump, death;
 
-	Player(Body b, Vector2 p) {
+	Player(Body b, Vector2 p, TextureRegion t) {
 		this.body = b;
 		deltaX = 0;
-		speed = 150f;
+		speed = 8f;
 		accel = 0.1f;
-		jumping = false;
+		jumping = true;
 		inAir = true;
-		jumpingTime = 0f;
 		dead = false;
 		spawnPosition = p;
 		deathTime = 1.5f;
 		jump = Gdx.audio.newSound(Gdx.files.internal("audio/jump.wav"));
 		death = Gdx.audio.newSound(Gdx.files.internal("audio/death.wav"));
-		sprite = new Sprite(new Texture("images/player.png"));
+		sprite = new Sprite(t);
+		sprite.setScale(GameScreen.unitScale);
 		body.setUserData(this);
 
 		createBody(p);
@@ -72,24 +72,19 @@ public class Player extends Entity {
 			}
 		}
 
-		if (!inAir && !jumping && Gdx.input.isKeyPressed(Input.Keys.W)) {
-			jumping = true;
-			jumpingTime = 0.3f;
-			inAir = true;
-			jump.play(0.2f);
-		}
-
-		if (Math.abs(body.getLinearVelocity().y) > 1.0f) { inAir = true; }
+		if (Math.abs(body.getLinearVelocity().y) > 1f) { inAir = true; }
 		if (Math.abs(body.getLinearVelocity().y) < 0.1f) { inAir = false; }
 
+		if (!inAir && !jumping && Gdx.input.isKeyPressed(Input.Keys.W)) {
+			jumping = true;
+			inAir = true;
+			jump.play(0.2f);
+			int n = GameScreen.corpseCounter + 2;
+			body.applyLinearImpulse(0f, 6f * n, position.x, position.y, true);
+			//if (Math.abs(body.getLinearVelocity().y) > 12f) System.out.println(body.getLinearVelocity().y);
 
-		if (jumping && jumpingTime > 0) {
-			body.applyLinearImpulse(0f, 8e5f, position.x, position.y, true);
-			jumpingTime -= delta;
-			if (jumpingTime < 0) {
-				jumping = false;
-			}
 		}
+
 		deltaX = MathUtils.clamp(deltaX, -1.0f, 1.0f);
 		body.setTransform(position.x + speed * delta * deltaX, position.y, 0);
 
@@ -99,12 +94,14 @@ public class Player extends Entity {
 	}
 
 	void die() {
-		death.play(0.2f);
-		dead = true;
-		deathTime = 1.5f;
-		deathPosition = new Vector2(position.x, position.y); // gotta make a new instance
-		sprite.setAlpha(0f);
-		jumping = false;
+		if (!dead) {
+			dead = true;
+			death.play(0.2f);
+			deathTime = 1.5f;
+			deathPosition = new Vector2(position.x, position.y); // gotta make a new instance
+			sprite.setAlpha(0f);
+			jumping = true;
+		}
 	}
 
 	void collisionWithGround() {
@@ -112,7 +109,10 @@ public class Player extends Entity {
 		jumping = false;
 	}
 
-	void offTheGround() { inAir = true; }
+	void offTheGround() {
+		inAir = true;
+		jumping = true;
+	}
 
 	void createBody(Vector2 p) {
 		body.setActive(true);
@@ -120,18 +120,33 @@ public class Player extends Entity {
 		body.setLinearVelocity(0, 0);
 		position = body.getPosition();
 		PolygonShape box = new PolygonShape();
-		box.setAsBox(8, 8);
+		box.setAsBox(0.5f, 0.5f);
 
 		FixtureDef fixtureDef = new FixtureDef();
 		fixtureDef.shape = box;
-		fixtureDef.density = 0.5f;
-		fixtureDef.friction = 1f;
+		fixtureDef.density = 1f;
+		fixtureDef.friction = 0.2f;
 		fixtureDef.restitution = 0f;
 		body.setType(BodyDef.BodyType.DynamicBody);
 		body.createFixture(fixtureDef);
 		box.dispose();
-		body.setLinearDamping(1f);
+
+		PolygonShape sensor = new PolygonShape();
+		Vector2[] vertices = new Vector2[4];
+		vertices[0] = new Vector2(-0.15f, -0.45f);
+		vertices[1] = new Vector2(0.15f, -0.45f);
+		vertices[2] = new Vector2(0.15f, -0.55f);
+		vertices[3] = new Vector2(-0.15f, -0.55f);
+		sensor.set(vertices);
+		FixtureDef sensorDef = new FixtureDef();
+		sensorDef.shape = sensor;
+		sensorDef.isSensor = true;
+		body.createFixture(sensorDef);
+		sensor.dispose();
+
+		body.setLinearDamping(2f);
 		sprite.setAlpha(1f);
+		body.setFixedRotation(true);
 	}
 
 	@Override

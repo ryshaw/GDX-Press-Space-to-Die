@@ -6,13 +6,20 @@ import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.maps.MapProperties;
+import com.badlogic.gdx.maps.tiled.*;
+import com.badlogic.gdx.maps.tiled.renderers.OrthogonalTiledMapRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.*;
 import com.badlogic.gdx.physics.box2d.BodyDef.BodyType;
 import com.badlogic.gdx.utils.Array;
+
+import java.util.Iterator;
 
 
 public class GameScreen implements Screen {
@@ -29,42 +36,33 @@ public class GameScreen implements Screen {
 	Music music;
 	float respawnDelay;
 	Sound respawn;
+	TiledMap map;
+	OrthogonalTiledMapRenderer renderer;
+	static float unitScale = 1/16f;
+	static int corpseCounter; // used to fix a bug where the player's jump is halved
 
-
-	static Vector2[] manifolds;
 	ShapeRenderer shapeRenderer;
 
 	GameScreen(final Main game, int level) {
 		this.game = game;
 		Box2D.init();
-		world = new World(new Vector2(0, -240f), true);
+		world = new World(new Vector2(0, -20f), true);
 		debugRenderer = new Box2DDebugRenderer();
 		float aspectRatio = (float) Gdx.graphics.getHeight() / Gdx.graphics.getWidth();
-		camera = new OrthographicCamera(800, 800 * (aspectRatio));
-		camera.translate(-400, 0);
+		camera = new OrthographicCamera();
+		camera.setToOrtho(false, 40, 40 * aspectRatio);
+		camera.translate(0, 10);
 		camera.update();
 
-		BodyDef staticBody = new BodyDef();
-		staticBody.type = BodyType.StaticBody;
-		Body groundBody = world.createBody(staticBody);
-		new Ground(groundBody, new Vector2(0, 8));
-
-		Body spikesBody = world.createBody(staticBody);
-		new Spikes(spikesBody, new Vector2(-600, 24));
-
-		playerDef = new BodyDef();
-		playerDef.type = BodyType.DynamicBody;
-		body = world.createBody(playerDef);
-		player = new Player(body, new Vector2(-750, 100));
+		map = new TmxMapLoader().load("level1.tmx");
+		processMap(map);
+		renderer = new OrthogonalTiledMapRenderer(map, unitScale);
 
 		world.setContactListener(new Box2DCollision(player));
 
 		bodies = new Array<>();
 		toRemove = new Array<>();
 
-		manifolds = new Vector2[2];
-		manifolds[0] = new Vector2(0, 0);
-		manifolds[1] = new Vector2(10, 10);
 		shapeRenderer = new ShapeRenderer();
 
 		music = Gdx.audio.newMusic(Gdx.files.internal("audio/the-lift-by-kevin-macleod.mp3"));
@@ -74,7 +72,9 @@ public class GameScreen implements Screen {
 
 		respawnDelay = 0;
 		respawn = Gdx.audio.newSound(Gdx.files.internal("audio/respawn.wav"));
+		corpseCounter = 0;
 	}
+
 
 	@Override
 	public void render(float delta) {
@@ -83,6 +83,7 @@ public class GameScreen implements Screen {
 
 		if (player.dead) {
 			new Corpse(world.createBody(playerDef), player.deathPosition);
+			corpseCounter += 2;
 			player.dead = false;
 			player.body.setActive(false);
 			respawnDelay = 1f;
@@ -112,14 +113,11 @@ public class GameScreen implements Screen {
 			}
 		}
 		game.batch.end();
-		debugRenderer.render(world, camera.combined);
 
-		/*manifolds = Box2DCollision.manifold;
-		shapeRenderer.setProjectionMatrix(camera.combined);
-		shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-		shapeRenderer.setColor(Color.RED);
-		shapeRenderer.line(manifolds[0], manifolds[1]);
-		shapeRenderer.end();*/
+		renderer.setView(camera);
+		renderer.render();
+
+		//debugRenderer.render(world, camera.combined);
 
 		for (Entity e : toRemove) {
 			world.destroyBody(e.body);
@@ -129,7 +127,7 @@ public class GameScreen implements Screen {
 
 		float lerp = 3f;
 		Vector3 cam = camera.position;
-		Vector2 pos = new Vector2(player.position.x, player.position.y + 20);
+		Vector2 pos = new Vector2(player.position.x, player.position.y + 1);
 		// points camera above player
 		cam.x += (pos.x - cam.x) * lerp * delta;
 		cam.y += (pos.y - cam.y) * lerp * delta;
@@ -140,7 +138,7 @@ public class GameScreen implements Screen {
 
 	private boolean checkOutOfBounds(Entity e) {
 		Vector2 p = e.position;
-		return (Math.abs(p.x) > 1000 || Math.abs(p.y) > 450);
+		return (Math.abs(p.x) > 60 || Math.abs(p.y) > 50);
 	}
 
 
@@ -149,10 +147,40 @@ public class GameScreen implements Screen {
 		float timeStep = 1/60f;
 		accumulator += frameTime;
 		while (accumulator >= timeStep) {
-			world.step(timeStep, 10, 10);
+			world.step(timeStep, 6, 2);
 			accumulator -= timeStep;
 		}
 	}
+
+	private void processMap(TiledMap map) {
+		BodyDef staticBody = new BodyDef();
+		staticBody.type = BodyType.StaticBody;
+		playerDef = new BodyDef();
+		playerDef.type = BodyType.DynamicBody;
+
+		TiledMapTileLayer layer = (TiledMapTileLayer) map.getLayers().get(0);
+		for (int row = 0; row < layer.getHeight(); row++) {
+			for (int column = 0; column < layer.getWidth(); column++) {
+				TiledMapTileLayer.Cell c = layer.getCell(column, row);
+
+				if (c != null) {
+					TiledMapTile t = c.getTile();
+
+					if (t.getId() == 1) { // ground
+						Body groundBody = world.createBody(staticBody);
+						new Ground(groundBody, new Vector2(column + 0.5f, row + 0.5f));
+					} else if (t.getId() == 2) { // player
+						body = world.createBody(playerDef);
+						player = new Player(body, new Vector2(column, row), t.getTextureRegion());
+						t.setTextureRegion(new TextureRegion(new Texture("images/blank.png")));
+					} else if (t.getId() == 4) { // spikes
+						Body spikesBody = world.createBody(staticBody);
+						new Spikes(spikesBody, new Vector2(column + 0.5f, row + 0.5f));
+					}
+				}
+			}
+		}
+}
 
 	@Override
 	public void dispose() {
@@ -165,6 +193,8 @@ public class GameScreen implements Screen {
 
 		shapeRenderer.dispose();
 		music.dispose();
+		map.dispose();
+		renderer.dispose();
 	}
 
 	@Override
