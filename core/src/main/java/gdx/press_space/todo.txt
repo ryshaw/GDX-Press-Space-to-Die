@@ -1,0 +1,9 @@
+- more level content
+- more obstacles
+- 5 levels
+- story background (Hex)
+- change spawn position
+
+known bugs:
+- lines appearing in html version
+- jumping can be wonky

@@ -35,7 +35,32 @@ public class Player extends Entity {
 		sprite.setScale(GameScreen.unitScale);
 		body.setUserData(this);
 
-		createBody(p);
+		PolygonShape box = new PolygonShape();
+		box.setAsBox(0.5f, 0.5f);
+
+		FixtureDef fixtureDef = new FixtureDef();
+		fixtureDef.shape = box;
+		fixtureDef.density = 1f;
+		fixtureDef.friction = 0.2f;
+		fixtureDef.restitution = 0f;
+		body.setType(BodyDef.BodyType.DynamicBody);
+		body.createFixture(fixtureDef);
+		box.dispose();
+
+		PolygonShape sensor = new PolygonShape();
+		Vector2[] vertices = new Vector2[4];
+		vertices[0] = new Vector2(-0.15f, -0.45f);
+		vertices[1] = new Vector2(0.15f, -0.45f);
+		vertices[2] = new Vector2(0.15f, -0.55f);
+		vertices[3] = new Vector2(-0.15f, -0.55f);
+		sensor.set(vertices);
+		FixtureDef sensorDef = new FixtureDef();
+		sensorDef.shape = sensor;
+		sensorDef.isSensor = true;
+		body.createFixture(sensorDef);
+		sensor.dispose();
+
+		initializeBody(p);
 
 	}
 
@@ -78,9 +103,8 @@ public class Player extends Entity {
 		if (!inAir && !jumping && Gdx.input.isKeyPressed(Input.Keys.W)) {
 			jumping = true;
 			inAir = true;
-			jump.play(0.2f);
-			int n = GameScreen.corpseCounter + 2;
-			body.applyLinearImpulse(0f, 6f * n, position.x, position.y, true);
+			jump.play(Main.VOLUME);
+			body.applyLinearImpulse(0f, 12f, position.x, position.y, true);
 			//if (Math.abs(body.getLinearVelocity().y) > 12f) System.out.println(body.getLinearVelocity().y);
 
 		}
@@ -96,8 +120,8 @@ public class Player extends Entity {
 	void die() {
 		if (!dead) {
 			dead = true;
-			death.play(0.2f);
-			deathTime = 1.5f;
+			death.play(Main.VOLUME);
+			deathTime = 1f;
 			deathPosition = new Vector2(position.x, position.y); // gotta make a new instance
 			sprite.setAlpha(0f);
 			jumping = true;
@@ -114,35 +138,11 @@ public class Player extends Entity {
 		jumping = true;
 	}
 
-	void createBody(Vector2 p) {
+	void initializeBody(Vector2 p) {
 		body.setActive(true);
 		body.setTransform(p, 0);
 		body.setLinearVelocity(0, 0);
 		position = body.getPosition();
-		PolygonShape box = new PolygonShape();
-		box.setAsBox(0.5f, 0.5f);
-
-		FixtureDef fixtureDef = new FixtureDef();
-		fixtureDef.shape = box;
-		fixtureDef.density = 1f;
-		fixtureDef.friction = 0.2f;
-		fixtureDef.restitution = 0f;
-		body.setType(BodyDef.BodyType.DynamicBody);
-		body.createFixture(fixtureDef);
-		box.dispose();
-
-		PolygonShape sensor = new PolygonShape();
-		Vector2[] vertices = new Vector2[4];
-		vertices[0] = new Vector2(-0.15f, -0.45f);
-		vertices[1] = new Vector2(0.15f, -0.45f);
-		vertices[2] = new Vector2(0.15f, -0.55f);
-		vertices[3] = new Vector2(-0.15f, -0.55f);
-		sensor.set(vertices);
-		FixtureDef sensorDef = new FixtureDef();
-		sensorDef.shape = sensor;
-		sensorDef.isSensor = true;
-		body.createFixture(sensorDef);
-		sensor.dispose();
 
 		body.setLinearDamping(2f);
 		sprite.setAlpha(1f);

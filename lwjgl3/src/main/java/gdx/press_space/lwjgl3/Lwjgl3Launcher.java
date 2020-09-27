@@ -1,5 +1,6 @@
 package gdx.press_space.lwjgl3;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import gdx.press_space.Main;
@@ -19,7 +20,8 @@ public class Lwjgl3Launcher {
 		configuration.setTitle("Press Space to Die");
 		configuration.setWindowedMode(1600, 900);
 		configuration.setWindowIcon("images/player.png");
-		configuration.setResizable(false);
+		configuration.setResizable(true);
+		//configuration.setMaximized(true);
 		return configuration;
 	}
 }

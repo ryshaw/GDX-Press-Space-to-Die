@@ -14,7 +14,7 @@ public abstract class Entity {
 
 	void update(SpriteBatch batch, float delta) {
 		// static bodies are already drawn on the map render, like ground and spikes
-		if (body.getType() == BodyDef.BodyType.DynamicBody) {
+		if (body.getType() != BodyDef.BodyType.StaticBody) {
 			position = body.getPosition();
 			float spriteX = position.x - sprite.getWidth() / 2;
 			float spriteY = position.y - sprite.getHeight() / 2;
