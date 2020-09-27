@@ -36,7 +36,7 @@ public class Artifact extends Entity {
 	@Override
 	void update(SpriteBatch batch, float delta) {
 		offset += delta * 1.5f;
-		body.setTransform(position.x, yPosition + MathUtils.sin(offset) / 4, 0);
+		body.setTransform(position.x, yPosition + MathUtils.sin(offset) / 3, 0);
 		position = body.getPosition();
 		float spriteX = position.x - sprite.getWidth() / 2;
 		float spriteY = position.y - sprite.getHeight() / 2;

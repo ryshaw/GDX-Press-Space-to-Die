@@ -8,60 +8,78 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.physics.box2d.Body;
-import com.badlogic.gdx.physics.box2d.BodyDef;
-import com.badlogic.gdx.physics.box2d.FixtureDef;
-import com.badlogic.gdx.physics.box2d.PolygonShape;
+import com.badlogic.gdx.physics.box2d.*;
 
 public class Player extends Entity {
-	float deltaX, speed, accel, deathTime;
-	boolean jumping, inAir, dead;
+	float deltaX, speed, accel, deathTime, timeBetweenJumps;
 	Vector2 deathPosition, spawnPosition;
 	Sound jump, death;
+	boolean dead;
+	int numContacts;
 
 	Player(Body b, Vector2 p, TextureRegion t) {
 		this.body = b;
 		deltaX = 0;
 		speed = 8f;
 		accel = 0.1f;
-		jumping = true;
-		inAir = true;
 		dead = false;
 		spawnPosition = p;
-		deathTime = 1.5f;
+		deathTime = 1f;
 		jump = Gdx.audio.newSound(Gdx.files.internal("audio/jump.wav"));
 		death = Gdx.audio.newSound(Gdx.files.internal("audio/death.wav"));
 		sprite = new Sprite(t);
 		sprite.setScale(GameScreen.unitScale);
 		body.setUserData(this);
 
-		PolygonShape box = new PolygonShape();
-		box.setAsBox(0.5f, 0.5f);
+		EdgeShape edge = new EdgeShape();
+		edge.set(new Vector2(-0.5f, -0.5f), new Vector2(0.5f, -0.5f));
 
 		FixtureDef fixtureDef = new FixtureDef();
-		fixtureDef.shape = box;
+		fixtureDef.shape = edge;
 		fixtureDef.density = 1f;
-		fixtureDef.friction = 0.2f;
+		fixtureDef.friction = 1f;
 		fixtureDef.restitution = 0f;
 		body.setType(BodyDef.BodyType.DynamicBody);
+		body.createFixture(fixtureDef); // bottom edge
+
+		edge.set(new Vector2(-0.5f, -0.5f), new Vector2(-0.5f, 0.5f));
+		fixtureDef.shape = edge;
+		fixtureDef.density = 0f;
 		body.createFixture(fixtureDef);
-		box.dispose();
+		edge.set(new Vector2(0.5f, -0.5f), new Vector2(0.5f, 0.5f));
+		fixtureDef.shape = edge;
+		body.createFixture(fixtureDef);
+		edge.set(new Vector2(-0.5f, 0.5f), new Vector2(0.5f, 0.5f));
+		fixtureDef.shape = edge;
+		body.createFixture(fixtureDef);
 
 		PolygonShape sensor = new PolygonShape();
 		Vector2[] vertices = new Vector2[4];
-		vertices[0] = new Vector2(-0.15f, -0.45f);
-		vertices[1] = new Vector2(0.15f, -0.45f);
-		vertices[2] = new Vector2(0.15f, -0.55f);
-		vertices[3] = new Vector2(-0.15f, -0.55f);
+		vertices[0] = new Vector2(-0.3f, -0.45f);
+		vertices[1] = new Vector2(0.3f, -0.45f);
+		vertices[2] = new Vector2(0.3f, -0.55f);
+		vertices[3] = new Vector2(-0.3f, -0.55f);
 		sensor.set(vertices);
 		FixtureDef sensorDef = new FixtureDef();
 		sensorDef.shape = sensor;
 		sensorDef.isSensor = true;
 		body.createFixture(sensorDef);
+		vertices[0] = new Vector2(-0.3f, -0.3f);
+		vertices[1] = new Vector2(0.3f, -0.3f);
+		vertices[2] = new Vector2(0.3f, 0.3f);
+		vertices[3] = new Vector2(-0.3f, 0.3f);
+		sensor.set(vertices);
+		sensorDef.shape = sensor;
+		sensorDef.isSensor = false;
+		body.createFixture(sensorDef);
+
 		sensor.dispose();
+		edge.dispose();
+
+		timeBetweenJumps = 0.3f;
+		numContacts = 0;
 
 		initializeBody(p);
-
 	}
 
 	@Override
@@ -72,9 +90,7 @@ public class Player extends Entity {
 		// above line fixes a bug where walking off a platform means you stay in the air
 
 		deathTime -= delta;
-		if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && deathTime < 0f) {
-			die();
-		}
+		if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && deathTime < 0f) { die(); }
 
 		if (Gdx.input.isKeyPressed(Input.Keys.A)) {
 			if (deltaX > 0) {
@@ -97,23 +113,21 @@ public class Player extends Entity {
 			}
 		}
 
-		if (Math.abs(body.getLinearVelocity().y) > 1f) { inAir = true; }
-		if (Math.abs(body.getLinearVelocity().y) < 0.1f) { inAir = false; }
-
-		if (!inAir && !jumping && Gdx.input.isKeyPressed(Input.Keys.W)) {
-			jumping = true;
-			inAir = true;
-			jump.play(Main.VOLUME);
-			body.applyLinearImpulse(0f, 12f, position.x, position.y, true);
-			//if (Math.abs(body.getLinearVelocity().y) > 12f) System.out.println(body.getLinearVelocity().y);
-
+		timeBetweenJumps -= delta;
+		if (numContacts > 0 && Gdx.input.isKeyPressed(Input.Keys.W) && timeBetweenJumps < 0) {
+			timeBetweenJumps = 0.3f;
+			jump.play(Main.VOLUME - 0.1f);
+			body.setLinearVelocity(body.getLinearVelocity().x, 12f);
 		}
 
 		deltaX = MathUtils.clamp(deltaX, -1.0f, 1.0f);
 		body.setTransform(position.x + speed * delta * deltaX, position.y, 0);
+	}
 
-		if (Math.abs(position.x - spawnPosition.x) > 200 && !inAir) {
-			spawnPosition = new Vector2(position.x, position.y + 20);
+	void updateSpawnpoint(Vector2 p) {
+		Vector2 v = new Vector2(p.x, p.y + 1f);
+		if (spawnPosition.x != v.x || spawnPosition.y != v.y) {
+			spawnPosition = v;
 		}
 	}
 
@@ -124,18 +138,8 @@ public class Player extends Entity {
 			deathTime = 1f;
 			deathPosition = new Vector2(position.x, position.y); // gotta make a new instance
 			sprite.setAlpha(0f);
-			jumping = true;
+			deltaX = 0;
 		}
-	}
-
-	void collisionWithGround() {
-		inAir = false;
-		jumping = false;
-	}
-
-	void offTheGround() {
-		inAir = true;
-		jumping = true;
 	}
 
 	void initializeBody(Vector2 p) {
@@ -147,6 +151,8 @@ public class Player extends Entity {
 		body.setLinearDamping(2f);
 		sprite.setAlpha(1f);
 		body.setFixedRotation(true);
+		timeBetweenJumps = 0.3f;
+		numContacts = 0;
 	}
 
 	@Override

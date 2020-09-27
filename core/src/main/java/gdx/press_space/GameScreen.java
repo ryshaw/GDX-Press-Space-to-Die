@@ -4,12 +4,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.maps.tiled.*;
@@ -34,21 +31,17 @@ public class GameScreen implements Screen {
 	private final FitViewport viewport;
 	private final Stage stage;
 	Player player;
-	Body body;
 	private float accumulator = 0;
 	BodyDef playerDef;
 	Array<Body> bodies;
 	Array<Entity> toRemove;
 	Music music;
-	float respawnDelay;
+	float respawnDelay, timeToComplete;
 	Sound respawn, collect, click;
 	TiledMap map;
 	OrthogonalTiledMapRenderer renderer;
 	static float unitScale = 1/16f;
-	int artifactsCollected;
-	int numArtifacts;
-	float timeToComplete;
-	int deathCounter, lvl;
+	int artifactsCollected, numArtifacts, deathCounter, lvl;
 
 	ShapeRenderer shapeRenderer;
 
@@ -67,8 +60,13 @@ public class GameScreen implements Screen {
 
 		createStage(w, h);
 
+		TmxMapLoader mapLoader = new TmxMapLoader();
+		TmxMapLoader.Parameters par = new TmxMapLoader.Parameters();
+		par.textureMinFilter = Texture.TextureFilter.Nearest;
+		par.textureMagFilter = Texture.TextureFilter.Nearest;
+
+		map = mapLoader.load("level" + lvl + ".tmx", par);
 		numArtifacts = 0; // will be set when map is processed
-		map = new TmxMapLoader().load("level" + lvl + ".tmx");
 		processMap(map);
 		renderer = new OrthogonalTiledMapRenderer(map, unitScale);
 
@@ -92,11 +90,8 @@ public class GameScreen implements Screen {
 		timeToComplete = 0;
 		deathCounter = 0;
 
-		Vector3 cam = viewport.getCamera().position;
-		Vector2 pos = player.position;
-		// points camera above player
-		cam.x = pos.x;
-		cam.y = pos.y;
+		viewport.getCamera().position.x = player.position.x;
+		viewport.getCamera().position.y = player.position.y;
 		viewport.getCamera().update();
 	}
 
@@ -112,7 +107,6 @@ public class GameScreen implements Screen {
 			new Corpse(world.createBody(playerDef), player.deathPosition);
 			player.dead = false;
 			player.body.setActive(false);
-			//world.destroyBody(player.body);
 			respawnDelay = 1f;
 			if (artifactsCollected < numArtifacts) deathCounter += 1;
 		}
@@ -145,7 +139,7 @@ public class GameScreen implements Screen {
 		renderer.setView((OrthographicCamera) viewport.getCamera());
 		renderer.render();
 
-		//debugRenderer.render(world, camera.combined);
+		//debugRenderer.render(world, viewport.getCamera().combined);
 
 		for (Entity e : toRemove) {
 			world.destroyBody(e.body);
@@ -155,8 +149,7 @@ public class GameScreen implements Screen {
 
 		float lerp = 3f;
 		Vector3 cam = viewport.getCamera().position;
-		Vector2 pos = new Vector2(player.position.x, player.position.y + 1);
-		// points camera above player
+		Vector2 pos = new Vector2(player.position.x, player.position.y + 1); // points camera above player
 		cam.x += (pos.x - cam.x) * lerp * delta;
 		cam.y += (pos.y - cam.y) * lerp * delta;
 		viewport.getCamera().update();
@@ -168,10 +161,7 @@ public class GameScreen implements Screen {
 		doPhysicsStep(delta);
 	}
 
-	private boolean checkOutOfBounds(Entity e) {
-		Vector2 p = e.position;
-		return (Math.abs(p.x) > 60 || p.y < 0);
-	}
+	private boolean checkOutOfBounds(Entity e) { return (e.position.y < 0); }
 
 
 	private void doPhysicsStep(float delta) {
@@ -196,23 +186,8 @@ public class GameScreen implements Screen {
 	}
 
 	private void createStage(int w, int h) {
-		Label.LabelStyle labelStyle1 = new Label.LabelStyle();
-		BitmapFont bitmapFont = new BitmapFont(Gdx.files.internal("andina.fnt"));
-		labelStyle1.font = bitmapFont;
-		labelStyle1.fontColor = Color.BLACK;
-
-		Label.LabelStyle labelStyle2 = new Label.LabelStyle();
-		labelStyle2.font = bitmapFont;
-		labelStyle2.fontColor = Color.WHITE;
-
-		Label restart = new Label("restart", labelStyle1);
-		GlyphLayout layout = new GlyphLayout(bitmapFont, restart.getText());
-		float scale = 0.3f;
-		restart.setSize(layout.width * scale, layout.height * scale);
-		restart.setFontScale(scale);
-		restart.setBounds(0, 0, restart.getWidth(), restart.getHeight());
+		Label restart = new TextLabel("restart", 1, 0.3f, Align.topRight);
 		restart.setPosition(w - restart.getWidth() - 5, h - restart.getHeight());
-		restart.setAlignment(Align.topRight);
 		stage.addActor(restart);
 		restart.addListener(new LabelListener(restart) {
 			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
@@ -225,46 +200,29 @@ public class GameScreen implements Screen {
 			}
 		});
 
-		Label numCollected = new Label("artifacts: " + artifactsCollected, labelStyle1) {
+		Label numCollected = new TextLabel("artifacts: " + artifactsCollected, 1, 0.3f, Align.topLeft) {
 			@Override
 			public void act(float delta) {
 				super.act(delta);
 				this.setText("artifacts: " + artifactsCollected);
 			}
 		};
-		layout = new GlyphLayout(bitmapFont, numCollected.getText());
-		scale = 0.3f;
-		numCollected.setSize(layout.width * scale, layout.height * scale);
-		numCollected.setFontScale(scale);
-		numCollected.setBounds(0, 0, numCollected.getWidth(), numCollected.getHeight());
 		numCollected.setPosition(5, h - numCollected.getHeight());
-		numCollected.setAlignment(Align.topLeft);
 		stage.addActor(numCollected);
 
-		Label level = new Label("level " + lvl, labelStyle1);
-		layout = new GlyphLayout(bitmapFont, level.getText());
-		scale = 0.3f;
-		level.setSize(layout.width * scale, layout.height * scale);
-		level.setFontScale(scale);
-		level.setBounds(0, 0, level.getWidth(), level.getHeight());
+		Label level = new TextLabel("level " + lvl, 1, 0.3f, Align.top);
 		level.setPosition(w / 2f - level.getWidth() / 2, h - level.getHeight());
-		level.setAlignment(Align.top);
 		stage.addActor(level);
 
-		Label complete = new Label("level complete!", labelStyle2) {
+		Label complete = new TextLabel("level complete!", 2, 2f, Align.center) {
 			@Override
 			public void act(float delta) { if (artifactsCollected >= numArtifacts) this.setVisible(true); }
 		};
-		layout = new GlyphLayout(bitmapFont, complete.getText());
-		scale = 2f;
-		complete.setSize(layout.width * scale, layout.height * scale);
-		complete.setFontScale(scale);
 		complete.setPosition(w / 2f - complete.getWidth() / 2, h * (4/5f));
-		complete.setAlignment(Align.center);
 		complete.setVisible(false);
 		stage.addActor(complete);
 
-		Label time = new Label("time: ", labelStyle2) {
+		Label time = new TextLabel("time: ", 2, 1.5f, Align.bottom) {
 			@Override
 			public void act(float delta) {
 				if (artifactsCollected >= numArtifacts) {
@@ -275,17 +233,11 @@ public class GameScreen implements Screen {
 				}
 			}
 		};
-		layout = new GlyphLayout(bitmapFont, time.getText());
-		scale = 1.5f;
-		time.setSize(layout.width * scale, layout.height * scale);
-		time.setFontScale(scale);
-		time.setBounds(0, 0, time.getWidth(), time.getHeight());
 		time.setPosition(w / 2f - time.getWidth() / 2, h * (3/5f));
-		time.setAlignment(Align.bottom);
 		time.setVisible(false);
 		stage.addActor(time);
 
-		Label deaths = new Label("deaths: ", labelStyle2) {
+		Label deaths = new TextLabel("deaths: ", 2, 1.5f, Align.bottom) {
 			@Override
 			public void act(float delta) {
 				if (artifactsCollected >= numArtifacts) {
@@ -294,29 +246,15 @@ public class GameScreen implements Screen {
 				}
 			}
 		};
-		layout = new GlyphLayout(bitmapFont, deaths.getText());
-		scale = 1.5f;
-		deaths.setSize(layout.width * scale, layout.height * scale);
-		deaths.setFontScale(scale);
-		deaths.setBounds(0, 0, deaths.getWidth(), deaths.getHeight());
 		deaths.setPosition(w / 2f - deaths.getWidth() / 2, h * (2/5f));
-		deaths.setAlignment(Align.bottom);
 		deaths.setVisible(false);
 		stage.addActor(deaths);
 
-		Label nextLevel = new Label("next level", labelStyle2) {
+		Label nextLevel = new TextLabel("next level", 2, 1f, Align.bottom) {
 			@Override
-			public void act(float delta) {
-				if (artifactsCollected >= numArtifacts) this.setVisible(true);
-			}
+			public void act(float delta) { if (artifactsCollected >= numArtifacts) this.setVisible(true); }
 		};
-		layout = new GlyphLayout(bitmapFont, nextLevel.getText());
-		scale = 1f;
-		nextLevel.setSize(layout.width * scale, layout.height * scale);
-		nextLevel.setFontScale(scale);
-		nextLevel.setBounds(0, 0, nextLevel.getWidth(), nextLevel.getHeight());
 		nextLevel.setPosition(w / 2f - nextLevel.getWidth() / 2, h * (1/5f));
-		nextLevel.setAlignment(Align.bottom);
 		nextLevel.setVisible(false);
 		stage.addActor(nextLevel);
 		nextLevel.addListener(new LabelListener(nextLevel) {
@@ -341,14 +279,16 @@ public class GameScreen implements Screen {
 	}
 
 	private void processMap(TiledMap map) {
-		BodyDef staticBody = new BodyDef();
-		staticBody.type = BodyType.StaticBody;
+		BodyDef staticBodyDef = new BodyDef();
+		staticBodyDef.type = BodyType.StaticBody;
 		playerDef = new BodyDef();
 		playerDef.type = BodyType.DynamicBody;
-		BodyDef kinematicBody = new BodyDef();
-		kinematicBody.type = BodyType.KinematicBody;
+		BodyDef kinematicBodyDef = new BodyDef();
+		kinematicBodyDef.type = BodyType.KinematicBody;
 
 		TiledMapTileLayer layer = (TiledMapTileLayer) map.getLayers().get(0);
+
+		Body body;
 		for (int row = 0; row < layer.getHeight(); row++) {
 			for (int column = 0; column < layer.getWidth(); column++) {
 				TiledMapTileLayer.Cell c = layer.getCell(column, row);
@@ -356,20 +296,27 @@ public class GameScreen implements Screen {
 				if (c != null) {
 					TiledMapTile t = c.getTile();
 
-					if (t.getId() == 1) { // ground
-						Body groundBody = world.createBody(staticBody);
-						new Ground(groundBody, new Vector2(column + 0.5f, row + 0.5f));
+					if (t.getId() == 7) { // ground
+						t.setBlendMode(TiledMapTile.BlendMode.ALPHA);
+						body = world.createBody(staticBodyDef);
+						new Ground(body, new Vector2(column + 0.5f, row + 0.5f));
+
 					} else if (t.getId() == 2) { // player
 						body = world.createBody(playerDef);
 						player = new Player(body, new Vector2(column, row), t.getTextureRegion());
 						t.setTextureRegion(new TextureRegion(new Texture("images/blank.png")));
 					} else if (t.getId() == 4) { // spikes
-						Body spikesBody = world.createBody(staticBody);
-						new Spikes(spikesBody, new Vector2(column + 0.5f, row + 0.5f));
+						t.setBlendMode(TiledMapTile.BlendMode.ALPHA);
+						body = world.createBody(staticBodyDef);
+						new Spikes(body, new Vector2(column + 0.5f, row + 0.5f));
 					} else if (t.getId() == 5) { // artifact
 						numArtifacts += 1;
-						Body artifactBody = world.createBody(kinematicBody);
-						new Artifact(artifactBody, new Vector2(column + 0.5f, row + 0.5f));
+						body = world.createBody(kinematicBodyDef);
+						new Artifact(body, new Vector2(column + 0.5f, row + 0.5f));
+						t.setTextureRegion(new TextureRegion(new Texture("images/blank.png")));
+					} else if (t.getId() == 6) { // spawnpoint
+						body = world.createBody(staticBodyDef);
+						new Spawnpoint(body, new Vector2(column + 0.5f, row + 0.5f));
 						t.setTextureRegion(new TextureRegion(new Texture("images/blank.png")));
 					}
 				}

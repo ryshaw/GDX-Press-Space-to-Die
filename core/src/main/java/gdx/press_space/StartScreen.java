@@ -5,11 +5,8 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Camera;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -31,57 +28,31 @@ public class StartScreen implements Screen {
 		click = Gdx.audio.newSound(Gdx.files.internal("audio/click.wav"));
 		credits = false;
 
-		Label.LabelStyle labelStyle = new Label.LabelStyle();
-		BitmapFont bitmapFont = new BitmapFont(Gdx.files.internal("andina.fnt"));
-		labelStyle.font = bitmapFont;
-		labelStyle.fontColor = Color.BLACK;
-
-		Label.LabelStyle creditsStyle = new Label.LabelStyle();
-		BitmapFont f = new BitmapFont(Gdx.files.internal("courier.fnt"));
-		creditsStyle.font = f;
-		creditsStyle.fontColor = Color.BLACK;
-
-		Label title = new Label("press space to die", labelStyle);
-		GlyphLayout layout = new GlyphLayout(bitmapFont, title.getText());
-		float scale = 2f;
-		title.setSize(layout.width * scale, layout.height * scale);
-		title.setFontScale(scale);
+		Label title = new TextLabel("press space to die", 1, 2f, Align.center);
 		title.setPosition(w / 2f - title.getWidth() / 2, h * 0.85f);
-		title.setAlignment(Align.center);
 		stage.addActor(title);
 
-		Label start = new Label("start", labelStyle) {
+		Label start = new TextLabel("start", 1, 1.5f, Align.center) {
 			public void act(float delta) { this.setVisible(!credits); }
 		};
-		layout = new GlyphLayout(bitmapFont, start.getText());
-		scale = 1.5f;
-		start.setSize(layout.width * scale, layout.height * scale);
-		start.setFontScale(scale);
-		start.setBounds(0, 0, start.getWidth(), start.getHeight());
 		start.setPosition(w / 2f - start.getWidth() / 2, h * (0.45f));
-		start.setAlignment(Align.center);
 		stage.addActor(start);
 		start.addListener(new LabelListener(start) {
 			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
 				music.stop();
 				click.play(Main.VOLUME);
 				game.currentScreen.dispose();
-				game.currentScreen = new GameScreen(game, 1);
+				game.currentScreen = new StoryScreen(game); // new GameScreen(game, 1);
 				game.setScreen(game.currentScreen);
 				return true;
 			}
 		});
 
 
-		Label quit = new Label("quit", labelStyle) {
+		Label quit = new TextLabel("quit", 1, 1.5f, Align.center) {
 			public void act(float delta) { this.setVisible(!credits); }
 		};
-		layout = new GlyphLayout(bitmapFont, quit.getText());
-		quit.setSize(layout.width * scale, layout.height * scale);
-		quit.setFontScale(scale);
-		quit.setBounds(0, 0, quit.getWidth(), quit.getHeight());
 		quit.setPosition(w / 2f - quit.getWidth() / 2, h * (0.15f));
-		quit.setAlignment(Align.center);
 		stage.addActor(quit);
 		quit.addListener(new LabelListener(quit) {
 			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
@@ -91,41 +62,26 @@ public class StartScreen implements Screen {
 			}
 		});
 
-		Label credit = new Label("a game by Ryan Shaw", labelStyle) {
+		Label credit = new TextLabel("a game by Ryan Shaw", 1, 0.5f, Align.center) {
 			public void act(float delta) { this.setVisible(!credits); }
 		};
-		layout = new GlyphLayout(bitmapFont, credit.getText());
-		scale = 0.5f;
-		credit.setSize(layout.width * scale, layout.height * scale);
-		credit.setFontScale(scale);
-		credit.setPosition(w - 5 - credit.getWidth(), credit.getHeight());
+		credit.setPosition(w - 10 - credit.getWidth(), credit.getHeight());
 		credit.setAlignment(Align.center);
 		stage.addActor(credit);
 
 
 		String attribution = getCredits();
-		Label longCredits = new Label(attribution, creditsStyle) {
+		Label longCredits = new TextLabel(attribution, 3, 1f, Align.left) {
 			public void act(float delta) { this.setVisible(credits); }
 		};
-		layout = new GlyphLayout(f, longCredits.getText());
-		scale = 1f;
-		longCredits.setSize(layout.width * scale, layout.height * scale);
-		longCredits.setFontScale(scale);
 		longCredits.setPosition(w / 2f - longCredits.getWidth() / 2, h * 0.2f);
-		longCredits.setAlignment(Align.left);
 		stage.addActor(longCredits);
 
 
-		Label creditButton = new Label("credits", labelStyle) {
+		Label creditButton = new TextLabel("credits", 1, 1.5f, Align.center) {
 			public void act(float delta) { this.setVisible(!credits); }
 		};
-		scale = 1.5f;
-		layout = new GlyphLayout(bitmapFont, creditButton.getText());
-		creditButton.setSize(layout.width * scale, layout.height * scale);
-		creditButton.setFontScale(scale);
-		creditButton.setBounds(0, 0, creditButton.getWidth(), creditButton.getHeight());
 		creditButton.setPosition(w / 2f - creditButton.getWidth() / 2, h * (0.3f));
-		creditButton.setAlignment(Align.center);
 		stage.addActor(creditButton);
 		creditButton.addListener(new LabelListener(creditButton) {
 			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
@@ -135,15 +91,10 @@ public class StartScreen implements Screen {
 			}
 		});
 
-		Label back = new Label("back", labelStyle) {
+		Label back = new TextLabel("back", 1, 1.5f, Align.center) {
 			public void act(float delta) { this.setVisible(credits); }
 		};
-		layout = new GlyphLayout(bitmapFont, back.getText());
-		back.setSize(layout.width * scale, layout.height * scale);
-		back.setFontScale(scale);
-		back.setBounds(0, 0, back.getWidth(), back.getHeight());
 		back.setPosition(w / 2f - back.getWidth() / 2, h * 0.05f);
-		back.setAlignment(Align.center);
 		stage.addActor(back);
 		back.addListener(new LabelListener(back) {
 			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {

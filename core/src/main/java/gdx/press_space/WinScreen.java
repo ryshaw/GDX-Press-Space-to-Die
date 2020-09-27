@@ -5,11 +5,9 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Camera;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -29,28 +27,12 @@ public class WinScreen implements Screen {
 		Gdx.input.setInputProcessor(stage);
 		click = Gdx.audio.newSound(Gdx.files.internal("audio/click.wav"));
 
-		Label.LabelStyle labelStyle = new Label.LabelStyle();
-		BitmapFont bitmapFont = new BitmapFont(Gdx.files.internal("andina.fnt"));
-		labelStyle.font = bitmapFont;
-		labelStyle.fontColor = Color.BLACK;
-
-		Label title = new Label("game complete!", labelStyle);
-		GlyphLayout layout = new GlyphLayout(bitmapFont, title.getText());
-		float scale = 2f;
-		title.setSize(layout.width * scale, layout.height * scale);
-		title.setFontScale(scale);
+		Label title = new TextLabel("game complete!", 1, 2f, Align.center);
 		title.setPosition(w / 2f - title.getWidth() / 2, h - title.getHeight());
-		title.setAlignment(Align.center);
 		stage.addActor(title);
 
-		Label menu = new Label("main menu", labelStyle);
-		layout = new GlyphLayout(bitmapFont, menu.getText());
-		scale = 1f;
-		menu.setSize(layout.width * scale, layout.height * scale);
-		menu.setFontScale(scale);
-		menu.setBounds(0, 0, menu.getWidth(), menu.getHeight());
+		Label menu = new TextLabel("main menu", 1, 1f, Align.center);
 		menu.setPosition(w / 2f - menu.getWidth() / 2, menu.getHeight() / 2);
-		menu.setAlignment(Align.center);
 		stage.addActor(menu);
 		menu.addListener(new LabelListener(menu) {
 			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
@@ -65,23 +47,20 @@ public class WinScreen implements Screen {
 
 		Label levelScore;
 		for (int i = 1; i < 4; i++) {
-			levelScore = new Label("level " + i + " time: " + Main.levelTimes[i - 1], labelStyle);
-			layout = new GlyphLayout(bitmapFont, levelScore.getText());
-			scale = 1.2f;
-			levelScore.setSize(layout.width * scale, layout.height * scale);
-			levelScore.setFontScale(scale);
+			levelScore = new TextLabel("level " + i + " time: " + Main.levelTimes[i - 1], 1, 1.2f, Align.center);
 			levelScore.setPosition(w / 2f - levelScore.getWidth() / 2, h * (0.85f) - (h * (i / 8f)));
-			levelScore.setAlignment(Align.center);
 			stage.addActor(levelScore);
 		}
 
-		Label totalDeaths = new Label("total deaths: " + Main.totalDeaths, labelStyle);
-		layout = new GlyphLayout(bitmapFont, totalDeaths.getText());
-		scale = 1.2f;
-		totalDeaths.setSize(layout.width * scale, layout.height * scale);
-		totalDeaths.setFontScale(scale);
+		float totalTimeToComplete = 0f;
+		for (float f : Main.levelTimes) { totalTimeToComplete += f; }
+		totalTimeToComplete = MathUtils.round(totalTimeToComplete * 100f) / 100f;
+		Label totalTime = new TextLabel("total: " + totalTimeToComplete, 1, 1.2f, Align.center);
+		totalTime.setPosition(w / 2f - totalTime.getWidth() / 2, h * 0.3f);
+		stage.addActor(totalTime);
+
+		Label totalDeaths = new TextLabel("total deaths: " + Main.totalDeaths, 1, 1.2f, Align.center);
 		totalDeaths.setPosition(w / 2f - totalDeaths.getWidth() / 2, h * (1/5f));
-		totalDeaths.setAlignment(Align.center);
 		stage.addActor(totalDeaths);
 
 		music = Gdx.audio.newMusic(Gdx.files.internal("audio/rhinoceros-by-kevin-macleod.mp3"));
